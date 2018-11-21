@@ -101,10 +101,17 @@ glm_output%>%
 #Problem 2
 
 
-Load and clean the data for regression analysis (i.e.?convert numeric to factor where appropriate, check for missing data, etc.). 
+Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.). 
 
 ```{r}
 
+birthweight_data = read_csv("./data/birthweight.csv")
+
+birthweight_data = birthweight_data%>%
+  mutate(babysex = as.factor(babysex),
+         frace = as.factor(frace),
+         malform = as.factor(malform),
+         mrace = as.factor(mrace))
 ```
 
 
