@@ -40,31 +40,60 @@ For the city of Baltimore, MD, use the glm function to fit a logistic regression
 
 ```{r}
 
-glm_output = tidy_homicide_data%>%
+glm_output_md = tidy_homicide_data%>%
   filter(city_state == "Baltimore, MD")%>%
   glm(crime_status ~ victim_age + victim_sex + victim_race, family = binomial(link = "logit"), data = .)%>%
   broom::tidy()%>%
   mutate(conf.low = exp(estimate - 1.96*(std.error)),
          conf.high = exp(estimate + 1.96*(std.error)),
          estimate = exp(estimate))%>%
-  select(term, estimate, conf.low, conf.high)
+  select(term, estimate, conf.low, conf.high)%>%
+  filter(term == "victim_raceNon-white")%>%
+  mutate(term = str_replace(term, "victim_race", "Race: "))
 
+glm_output_md
   
 ```
 
 Intepretation: In this study, subjects with hypertension (reference group) 2.71 times the odds of developing cardiovascular disease compared to non-hypertensive subjects. With 95% conficence the true odds ratio lies in the range of 2.26-3.24.
 
 
-
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. Do this within a "tidy" pipeline, making use of purrr::map , list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
 ```{r}
 
+glm_output = tidy_homicide_data%>%
+  nest(uid:crime_status)%>%
+  mutate(models = map(data, ~glm(crime_status ~ victim_age + victim_sex + victim_race, family = binomial(link = "logit"), data = .x)),
+         models = map(models, broom::tidy))%>%
+  select(-data)%>%
+  unnest()%>%
+  filter(term == "victim_raceNon-white")%>%
+  mutate(conf.low = exp(estimate - 1.96*(std.error)),
+         conf.high = exp(estimate + 1.96*(std.error)),
+         estimate = exp(estimate))%>%
+  select(city_state, term, estimate, conf.low, conf.high)%>%
+  mutate(term = str_replace(term, "victim_race", "Race: "))
+
+glm_output
+  
 ```
 
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
 ```{r}
+
+glm_output%>%
+  ggplot(aes(reorder(city_state, estimate), estimate, color = city_state))+
+  geom_point()+
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high))+
+  labs(
+    y = "Adjusted Odds Ratio",
+    x = "City, State",
+    title = "Odds Ratio for Solving Homicides Comparing Non-white to White Victims")+
+  viridis::scale_color_viridis(discrete = TRUE)+
+  theme(legend.position = "none", 
+        axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
 
