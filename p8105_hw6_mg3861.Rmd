@@ -24,6 +24,15 @@ homicide_data = read_csv(url)
 Create a city_state variable (e.g. "Baltimore, MD"), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO - these don't report victim race. Also omit Tulsa, AL - this is a data entry mistake. Modifiy victim_race to have categories white and non-white , with white as the reference category. Be sure that victim_age is numeric. 
 
 ```{r}
+tidy_homicide_data = 
+  homicide_data%>%
+  mutate(city_state = str_c(city, ", ", state))%>%
+  select(city_state, everything())%>%
+  filter(!city_state %in% c("Dallas, TX", "Phoenix, AZ", "Kansas City, MO", "Tulsa, AL"))%>%
+  mutate(victim_race = ifelse(victim_race == "White", "White", "Non-white"),
+         victim_race = forcats::fct_relevel(victim_race, c("White", "Non-white")),
+         victim_age = as.numeric(victim_age),
+         crime_status = ifelse(disposition == "Closed by arrest", 1, 0))
 
 ```
 
@@ -31,7 +40,21 @@ For the city of Baltimore, MD, use the glm function to fit a logistic regression
 
 ```{r}
 
+glm_output = tidy_homicide_data%>%
+  filter(city_state == "Baltimore, MD")%>%
+  glm(crime_status ~ victim_age + victim_sex + victim_race, family = binomial(link = "logit"), data = .)%>%
+  broom::tidy()%>%
+  mutate(conf.low = exp(estimate - 1.96*(std.error)),
+         conf.high = exp(estimate + 1.96*(std.error)),
+         estimate = exp(estimate))%>%
+  select(term, estimate, conf.low, conf.high)
+
+  
 ```
+
+Intepretation: In this study, subjects with hypertension (reference group) 2.71 times the odds of developing cardiovascular disease compared to non-hypertensive subjects. With 95% conficence the true odds ratio lies in the range of 2.26-3.24.
+
+
 
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. Do this within a "tidy" pipeline, making use of purrr::map , list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
