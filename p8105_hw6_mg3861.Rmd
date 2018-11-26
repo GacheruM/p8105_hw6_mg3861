@@ -112,15 +112,49 @@ birthweight_data = birthweight_data%>%
          frace = as.factor(frace),
          malform = as.factor(malform),
          mrace = as.factor(mrace))
+
+summary(birthweight_data)
 ```
 
+The variables pnumsga and pnumlbw have all entries equal to 0
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values - use add_predictions and add_residuals in making this plot. 
 
+As a starting point, we can fit the preliminary model based on factors that are believed to have an influence in low birth weights. 
+
 ```{r}
+
+modified_birthweight_data = birthweight_data%>%
+  mutate(babysex_male = ifelse(babysex == "1", "1", "0"),
+         frace_black = ifelse(frace == "2", "1", "0"),
+         mrace_black = ifelse(mrace == "2", "1", "0"))
+
+fit = lm(bwt ~ bhead + blength + babysex_male + delwt  + frace_black + mrace_black + fincome + gaweeks + malform + mheight + momage + parity + ppbmi + smoken + wtgain, data = modified_birthweight_data)
+
+summary(fit)
 
 ```
 
+
+Use criterion based procedures to determine the best model from the subset of variables 
+
+```{r}
+
+best <- function(model, ...) 
+{
+  subsets <- regsubsets(formula(model), model.frame(model), ...)
+  subsets <- with(summary(subsets),
+                  cbind(p = as.numeric(rownames(which)), which, rss, rsq, adjr2, cp, bic))
+  
+  return(subsets)
+}  
+
+
+# Select the 'best' model of all subsets for 4-predictor model
+round(best(fit, nbest = 1),2)
+```
+
+We are left with a model with baby's head circumference, baby's length at birth, baby's sex, mother's race (black or not), mother's weight at delivery, gestational age, mother's pre-pregnancy BMI, and average number of cigarettes smoked per day during pregnancy as the main effects.  
 
 Compare your model to two others: One using length at birth and gestational age as predictors (main effects only): One using head circumference, length, sex, and all interactions (including the three-way interaction) between these, Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate. 
 
