@@ -156,9 +156,47 @@ round(best(fit, nbest = 1),2)
 
 We are left with a model with baby's head circumference, baby's length at birth, baby's sex, mother's race (black or not), mother's weight at delivery, gestational age, mother's pre-pregnancy BMI, and average number of cigarettes smoked per day during pregnancy as the main effects.  
 
+Show a plot of model residuals against fitted values - use add_predictions and add_residuals in making this plot
+
+
+```{r}
+
+library(modelr)
+
+fit = lm(bwt ~ bhead + blength + babysex_male + delwt + mrace_black + gaweeks + ppbmi + smoken, data = modified_birthweight_data)
+
+modified_birthweight_data %>%
+  gather_predictions(fit)%>%
+  add_residuals(fit)%>%
+  ggplot(aes(x = pred, y = resid))+
+  geom_point()
+```
+
+
 Compare your model to two others: One using length at birth and gestational age as predictors (main effects only): One using head circumference, length, sex, and all interactions (including the three-way interaction) between these, Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate. 
 
 ```{r}
 
+cv_df =
+  crossv_mc(modified_birthweight_data, 100) %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble))
+
+cv_df = 
+  cv_df %>% 
+  mutate(model1 = map(train, ~lm(bwt ~ bhead + blength + babysex_male + delwt + mrace_black + gaweeks + ppbmi + smoken, data = as_tibble(.x))),
+         model2 = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         model3 = map(train, ~lm(bwt ~ bhead + blength + babysex_male + bhead*blength + bhead*babysex_male + blength*babysex_male, data = .x))) %>% 
+  mutate(rmse_model1 = map2_dbl(model1, test, ~rmse(model = .x, data = .y)),
+         rmse_model2 = map2_dbl(model2, test, ~rmse(model = .x, data = .y)),
+         rmse_model3 = map2_dbl(model3, test, ~rmse(model = .x, data = .y)))
+
+
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
 
