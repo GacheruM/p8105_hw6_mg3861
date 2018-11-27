@@ -12,7 +12,7 @@ library(tidyverse)
 
 #Problem 1
 
-This dataset contains information on homicides in 50 large ctiies across the country.
+This dataset contains information on homicides in 50 large cities across the country.
 
 ```{r warning = FALSE, message = FALSE}
 url = "https://raw.githubusercontent.com/washingtonpost/data-homicides/master/homicide-data.csv"
@@ -21,7 +21,7 @@ homicide_data = read_csv(url)
 ```
 
 
-Create a city_state variable (e.g. "Baltimore, MD"), and a binary variable indicating whether the homicide is solved. Omit cities Dallas, TX; Phoenix, AZ; and Kansas City, MO - these don't report victim race. Also omit Tulsa, AL - this is a data entry mistake. Modifiy victim_race to have categories white and non-white , with white as the reference category. Be sure that victim_age is numeric. 
+Tidy the dataset by creating a city_state variable and a binary variable indicating whether the homicide is solved and omitting cities Dallas, TX, Phoenix, AZ, Kansas City, MO, and Tulsa, AL. In addition, modify victim_race to have categories white and non-white (with white as the reference category) and convert victim_age to numeric. 
 
 ```{r}
 tidy_homicide_data = 
@@ -36,7 +36,7 @@ tidy_homicide_data =
 
 ```
 
-For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race (as just defined) as predictors. Save the output of glm as an R object; apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed. 
+For the city of Baltimore, MD, fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. Then, obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing non-white victims to white victims keeping all other variables fixed. 
 
 ```{r}
 
@@ -51,14 +51,11 @@ glm_output_md = tidy_homicide_data%>%
   filter(term == "victim_raceNon-white")%>%
   mutate(term = str_replace(term, "victim_race", "Race: "))
 
-glm_output_md
+glm_output_md%>%knitr::kable(col.names = c("Term", "Adjusted Odds Ratio", "Low CI", "High CI"))
   
 ```
 
-Intepretation: In this study, subjects with hypertension (reference group) 2.71 times the odds of developing cardiovascular disease compared to non-hypertensive subjects. With 95% conficence the true odds ratio lies in the range of 2.26-3.24.
-
-
-Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims. Do this within a "tidy" pipeline, making use of purrr::map , list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
+Fit a logistic regression for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing non-white victims to white victims
 
 ```{r}
 
@@ -72,14 +69,13 @@ glm_output = tidy_homicide_data%>%
   mutate(conf.low = exp(estimate - 1.96*(std.error)),
          conf.high = exp(estimate + 1.96*(std.error)),
          estimate = exp(estimate))%>%
-  select(city_state, term, estimate, conf.low, conf.high)%>%
-  mutate(term = str_replace(term, "victim_race", "Race: "))
+  select(city_state, estimate, conf.low, conf.high)
 
-glm_output
+glm_output%>%knitr::kable(col.names = c("city_state", "Adjusted Odds Ratio (Non-white)", "Low CI", "High CI"))
   
 ```
 
-Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
+Create a plot that shows the estimated ORs and CIs for each city and organize cities according to estimated OR.
 
 ```{r}
 
@@ -97,12 +93,12 @@ glm_output%>%
 
 ```
 
+For a majority of the cities, the estimate odds ratio for solving homicides for nonwhites in comparison to white victims is less than one. In addition, for about 50% of the cities, the odds ratio confidence interval does not include 1, indicating that the true odds for solving homicides for non-whites is significantly different from the odds for whites (in this case, the odds for nonwhites is lower). 
+
 
 #Problem 2
 
-
-Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.). 
-
+Load and clean the data for regression analysis 
 ```{r}
 
 birthweight_data = read_csv("./data/birthweight.csv")
@@ -113,14 +109,20 @@ birthweight_data = birthweight_data%>%
          malform = as.factor(malform),
          mrace = as.factor(mrace))
 
-summary(birthweight_data)
 ```
 
-The variables pnumsga and pnumlbw have all entries equal to 0
+During the data cleaning process, one key observation is made:
 
-Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values - use add_predictions and add_residuals in making this plot. 
+1. The variables "pnumsga"" and "pnumlbw" have all entries equal to 0
 
-As a starting point, we can fit the preliminary model based on factors that are believed to have an influence in low birth weights. 
+```{r}
+
+summary(birthweight_data$pnumsga)
+summary(birthweight_data$pnumlbw)
+```
+
+
+As a starting point, we can fit the preliminary model based on factors that are believed to have an influence in low birth weights in the scientific world. Smoking is well known to have a negative impact on birth weights. Other factors that have been hypothesized to have an impact include baby's gender, parents' genes based on race, stress (income could be a potential replacement), number of prior low weight births, mother's age, size of parents, diabetes, high blood pressure, length of pregnancy, maternal's weight at the last week of gestation, and high risk pregnancy. We can use the variables that provide similar information.
 
 ```{r}
 
@@ -136,7 +138,7 @@ summary(fit)
 ```
 
 
-Use criterion based procedures to determine the best model from the subset of variables 
+With an initial model, we can use criterion based procedures to determine the best model from the subset of variables 
 
 ```{r}
 
@@ -150,14 +152,13 @@ best <- function(model, ...)
 }  
 
 
-# Select the 'best' model of all subsets for 4-predictor model
+# Select the 'best' model of all subsets 
 round(best(fit, nbest = 1),2)
 ```
 
 We are left with a model with baby's head circumference, baby's length at birth, baby's sex, mother's race (black or not), mother's weight at delivery, gestational age, mother's pre-pregnancy BMI, and average number of cigarettes smoked per day during pregnancy as the main effects.  
 
-Show a plot of model residuals against fitted values - use add_predictions and add_residuals in making this plot
-
+Show a plot of model residuals against fitted values 
 
 ```{r}
 
@@ -169,11 +170,20 @@ modified_birthweight_data %>%
   gather_predictions(fit)%>%
   add_residuals(fit)%>%
   ggplot(aes(x = pred, y = resid))+
-  geom_point()
+  geom_point()+
+  labs( x= "Fitted Values",
+        y = "Residuals")
+
 ```
 
+The residuals vs. fitted values plot can be used to assess constant variance in the data. In this case, we observe a cluster around 0 towards the higher end of the fitted values. However, towards the lower end of the fitted values, we observe a slight curve and the residuals are not scattered around 0. This slightly violates constant variance assumption. 
 
-Compare your model to two others: One using length at birth and gestational age as predictors (main effects only): One using head circumference, length, sex, and all interactions (including the three-way interaction) between these, Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate. 
+
+Compare your model to two others: 
+
+1. One using length at birth and gestational age as predictors (main effects only)
+
+2. One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
 
 ```{r}
 
@@ -197,6 +207,13 @@ cv_df %>%
   gather(key = model, value = rmse) %>% 
   mutate(model = str_replace(model, "rmse_", ""),
          model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) + geom_violin()
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin()+
+  labs(x = "Model",
+       y = "RMSE",
+       title = "Model Comparison")+
+  scale_x_discrete(labels = c("Proposed", "Length_GestationalAge", "Interaction"))
+
 ```
 
+Based on RMSE, my proposed model has a better predictive ability that the comparison models. The models with more predictors and complexity (interaction) performed better than the simple two-predictor model.  Among these three models, I would pick the proposed model for prediction purposes. However, in general, the proposed model might not be the optimal model, which was somewhat indicated by the residuals vs. fitted graph. 
