@@ -2,12 +2,13 @@
 title: "Homework 6"
 author: "Margaret Gacheru"
 date: "November 21, 2018"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(leaps)
 ```
 
 #Problem 1
@@ -23,7 +24,7 @@ homicide_data = read_csv(url)
 
 Tidy the dataset by creating a city_state variable and a binary variable indicating whether the homicide is solved and omitting cities Dallas, TX, Phoenix, AZ, Kansas City, MO, and Tulsa, AL. In addition, modify victim_race to have categories white and non-white (with white as the reference category) and convert victim_age to numeric. 
 
-```{r}
+```{r warning = FALSE, message = FALSE}
 tidy_homicide_data = 
   homicide_data%>%
   mutate(city_state = str_c(city, ", ", state))%>%
@@ -156,7 +157,7 @@ best <- function(model, ...)
 round(best(fit, nbest = 1),2)
 ```
 
-We are left with a model with baby's head circumference, baby's length at birth, baby's sex, mother's race (black or not), mother's weight at delivery, gestational age, mother's pre-pregnancy BMI, and average number of cigarettes smoked per day during pregnancy as the main effects.  
+Looking at the highest adjusted R-squared and lowest BIC & Cp, we are left with a model with baby's head circumference, baby's length at birth, baby's sex, mother's race (black or not), mother's weight at delivery, gestational age, mother's pre-pregnancy BMI, and average number of cigarettes smoked per day during pregnancy as the main effects.  
 
 Show a plot of model residuals against fitted values 
 
